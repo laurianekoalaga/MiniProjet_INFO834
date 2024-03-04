@@ -1,10 +1,11 @@
 # Importation de la classe MongoClient depuis le module pymongo
 from pymongo import MongoClient
+from datetime import datetime
 
 # Définition de la classe MongoDBManager
 class MongoDBManager:
     
-    # Méthode d'initialisation de la classe avec les paramètres url et database_name
+    
     def __init__(self, url):
         # Initialisation des attributs de la classe
         self.client = None
@@ -35,34 +36,102 @@ class MongoDBManager:
             print("Erreur lors de la connexion a la base de donnees :", e)
             return False
 
-    # Méthode pour insérer un document dans une collection
-    def insert_one(self, collection_name, document):
+    # Méthode pour insérer un utilisateur dans la collection Utilisateurs
+    def insert_user(self, document):
         try:
-            # Vérification si la collection existe dans la base de données
-            if collection_name in self.db.list_collection_names():
-                # Si la collection existe, insertion du document dans la collection avec l'option {'autoIndexId': False}
-                collection = self.db[collection_name]
-                return collection.insert_one(document, {'autoIndexId': False})
-            else:
-                # Si la collection n'existe pas, afficher un message d'erreur
-                print("La collection specifiee n existe pas.")
-                return None
+                # Vérification si le username est déjà utilisé
+                if self.db["Utilisateurs"].count_documents({"username": document["username"]}) == 0:
+                    # Si le username est unique, insertion du document dans la collection avec l'option {'autoIndexId': False}
+                    collection = self.db["Utilisateurs"]
+                    return collection.insert_one(document, {'autoIndexId': False})
+                else:
+                    print("Le username", document["username"], "est déjà utilisé.")
+                    return False
+                
         except Exception as e:
             # Capture des exceptions et affichage d'un message d'erreur en cas de problème lors de l'insertion
-            print("Erreur lors de l insertion du document :", e)
+            print("Erreur lors de l'insertion du document :", e)
+            return False
+
+    # Méthode pour ajouter une conversation pour un utilisateur
+    def add_conversation(self, username, conversation):
+        try:
+            # Vérifier si l'utilisateur existe dans la collection Utilisateurs
+            if self.db["Utilisateurs"].count_documents({"username": username}) > 0:
+                    # Insérer la conversation dans la collection Conversations
+                    conversation_result = self.db["Conversations"].insert_one(conversation)
+                    if conversation_result:
+                        conversation_id = conversation_result.inserted_id
+                        # Ajouter l'ID de la conversation à la liste des conversations de l'utilisateur
+                        self.db["Utilisateurs"].update_one({"username": username}, {"$push": {"conversations": conversation_id}})
+                        print("Conversation ajoutée avec succès pour l'utilisateur avec le username :", username)
+                        return True
+                    else:
+                        print("Erreur lors de l'insertion de la conversation.")
+                        return False
+            else:
+                print("L'utilisateur avec le username", username, "n'existe pas.")
+                return False
+        except Exception as e:
+            print("Erreur lors de l'ajout de la conversation :", e)
+            return False
+
+
+    # Méthode pour ajouter un message à une conversation
+    def add_message(self, conversation_id, message):
+        try:
+            # Vérifier si la conversation existe dans la collection Conversation
+            if self.db["Conversations"].count_documents({"_id": conversation_id}) > 0:
+                # Ajouter le message à la conversation
+                self.db["Conversations"].update_one({"_id": conversation_id}, {"$push": {"messages": message}})
+                print("Message ajouté avec succès à la conversation avec l'ID :", conversation_id)
+                return True
+            else:
+                print("La conversation avec l'ID", conversation_id, "n'existe pas.")
+                return False
+        except Exception as e:
+            print("Erreur lors de l'ajout du message à la conversation :", e)
+            return False
+
+    # Méthode pour récupérer toutes les conversations d'un utilisateur
+    def get_user_conversations(self, username):
+        try:
+            # Vérifier si l'utilisateur existe dans la collection Utilisateurs
+            if self.db["Utilisateurs"].count_documents({"username": username}) > 0:
+                # Récupérer les conversations de l'utilisateur
+                utilisateur = self.db["Utilisateurs"].find_one({"username": username})
+                conversations_ids = utilisateur.get("conversations", [])
+                conversations = []
+                for conversation_id in conversations_ids:
+                    conversation = self.db["Conversations"].find_one({"_id": conversation_id})
+                    if conversation:
+                        conversations.append(conversation)
+                return conversations
+            else:
+                print("L'utilisateur avec le username", username, "n'existe pas.")
+                return None
+        except Exception as e:
+            print("Erreur lors de la récupération des conversations de l'utilisateur :", e)
             return None
 
-    # Méthode pour afficher tous les documents d'une collection
-    def find_all(self, collection_name):
+    
+    # Méthode pour récupérer toutes les informations d'un utilisateur sans le mot de passe
+    def get_user_info(self, username):
         try:
-            # Sélection de la collection dans la base de données
-            collection = self.db[collection_name]
-            # Récupération de tous les documents de la collection
-            return collection.find()
+            # Vérifier si l'utilisateur existe dans la collection Utilisateurs
+            user_info = self.db["Utilisateurs"].find_one({"username": username}, {"mot_de_passe": 0})
+            if user_info:
+                return user_info
+            else:
+                print("L'utilisateur avec le username", username, "n'existe pas.")
+                return None
         except Exception as e:
-            # Capture des exceptions et affichage d'un message d'erreur en cas de problème lors de la récupération des documents
-            print("Erreur lors de la recuperation des documents :", e)
+            print("Erreur lors de la récupération des informations de l'utilisateur :", e)
             return None
+
+
+    # Méthode pour supprimer un message d'une conversation et une message???
+        
 
 
 # Exemple d'utilisation :
@@ -73,17 +142,59 @@ if __name__ == "__main__":
     # Connexion à la base de données spécifiée (dans cet exemple, "ProjInfo834")
     if db_manager.connect("ProjInfo834"):
         # Si la connexion est réussie, un nouvel utilisateur est inséré 
-        utilisateur = {"pseudo": "utilisateur_testPython", "mot_de_passe": "mdp"}
-        insertion_result = db_manager.insert_one("Utilisateurs", utilisateur)
+        utilisateur = {"username": "utilisateur_testPython", "mot_de_passe": "mdp"}
+        insertion_result = db_manager.insert_user(utilisateur) 
         if insertion_result:
             print("\nDocument insere avec l ID :", insertion_result.inserted_id)
 
 
         # Récupération de tous les documents de la collection "Utilisateurs"
+        '''
         utilisateurs = db_manager.find_all("Utilisateurs")
         print("\nutilisateurs existants:\n")
         for utilisateur in utilisateurs:
             print(utilisateur)
+        '''
+
+        # Tester l'ajout d'une conversation pour un utilisateur
+        conversation = {"nom": "conversation_test", "messages": []}
+        conversation_id = None  # Initialisation de la variable pour stocker l'ID de la conversation
+        if db_manager.add_conversation("utilisateur_testPython", conversation):
+            print("Conversation ajoutée avec succès.")
+            conversation_id = db_manager.get_user_conversations("utilisateur_testPython")[-1]["_id"]
+        else:
+            print("Erreur lors de l'ajout de la conversation.")
+
+        message_id=0
+        # Tester l'ajout d'un message à une conversation
+        if conversation_id:
+            message_id+=1
+            message = {"_id": message_id,"emetteur": "utilisateur_testPython", "contenu": "Ceci est un message de test", "timestamp":datetime.now()}
+            if db_manager.add_message(conversation_id, message):
+                print("Message ajouté avec succès à la conversation.")
+            else:
+                print("Erreur lors de l'ajout du message à la conversation.")
+        else:
+            print("Impossible de tester l'ajout de message car l'ID de la conversation n'a pas été récupéré.")
+
+
+        # Tester la récupération de toutes les informations d'une conversation
+        user_conversations = db_manager.get_user_conversations("utilisateur_testPython")
+        if user_conversations:
+            print("Conversations de l'utilisateur :")
+            for conversation in user_conversations:
+                print(conversation)
+        else:
+            print("Aucune conversation trouvée pour cet utilisateur.")
+
+        #Tester la récupération de toutes les informations d'un utilisateur 
+        user_info = db_manager.get_user_info("utilisateur_testPython")
+        if user_info:
+            print("Informations de l'utilisateur :", user_info)
+        else:
+            print("Utilisateur non trouvé.")
+
+
     else:
         # Si la connexion échoue, afficher un message d'erreur
         print("Impossible de se connecter a la base de donnees.")
