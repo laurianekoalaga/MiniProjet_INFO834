@@ -1,0 +1,69 @@
+<!-- messaging.component.html -->
+<head>
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css'>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.17.0/font/bootstrap-icons.css">
+</head>
+<div class="container">
+  <div class="row clearfix">
+      <div class="col-lg-12">
+          <div class="card chat-app">
+              <div id="plist" class="conversations-list">
+                  <div class="input-group">
+                      <div class="input-group-prepend">
+                          <span class="input-group-text"><i class="fa fa-search"></i></span>
+                      </div>
+                      <input type="text" class="form-control" placeholder="Search...">
+                  </div>
+                  <ul class="list-unstyled chat-list mt-2 mb-0">
+                      <li *ngFor="let conversation of conversations" class="clearfix" (click)="onSelectConversation(conversation.id)">
+                          <img [src]="conversation.avatar" alt="Avatar Image">
+                          <div class="about">
+                              <div class="name">{{ conversation.name }}</div>
+                              <div class="status"> <i class="fa fa-circle offline"></i> left {{ conversation.lastSeen }} mins ago </div>
+                          </div>
+                      </li>
+                  </ul>
+              </div>
+              <div class="chat">
+                  <div class="chat-header clearfix">
+                      <div class="row justify-content-between">
+                          <div class="col-lg-6">
+                              <a href="javascript:void(0);" data-toggle="modal" data-target="#view_info">
+                                  <img src="./assets/images/avatar_image.jpg" alt="Avatar Image">
+                              </a>
+                              <div class="chat-about">
+                                  <h6 class="m-b-0">{{ selectedConversationName }}</h6>
+                                  <small>Last seen: {{ selectedConversationLastSeen }} hours ago</small>
+                              </div>
+                          </div>
+                          <div class="col-lg-3 hidden-sm text-right">
+                              <button id="logoutButton" class="btn btn-outline-danger" (click)="deconnexionRequest()">Déconnexion</button>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="chat-history">
+                      <ul class="m-b-0">
+                          <!-- Messages affichés ici -->
+                          <li *ngFor="let message of messages" class="clearfix">
+                              <div class="message-data" [ngClass]="{'text-right': message.isMine}">
+                                  <span class="message-data-time">{{ message.timestamp | date: 'hh:mm a, MMM dd' }}</span>
+                              </div>
+                              <div class="message" [ngClass]="{'my-message': message.isMine, 'other-message': !message.isMine}">
+                                  {{ message.content }}
+                              </div>
+                          </li>
+                      </ul>
+                  </div>
+                  <div class="chat-message clearfix">
+                      <div class="input-group mb-0">
+                          <input type="text" class="form-control" placeholder="Votre message..." [(ngModel)]="newMessage" id="messageInput">
+                          <div class="input-group-append">
+                              <button id="sendMessageButton" class="btn btn-primary" type="button" (click)="sendMessage()">Envoyer</button>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>

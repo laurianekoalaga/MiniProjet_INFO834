@@ -1,0 +1,8 @@
+<!-- src/app/login/login.component.html -->
+<form (ngSubmit)="onSubmit()">
+    <label for="username">Pseudo:</label>
+    <input type="text" id="username" name="username" [(ngModel)]="username" required (ngModelChange)="onUsernameChange()">
+    <button type="submit" [disabled]="isFormInvalid">Se connecter</button>
+    <div *ngIf="messageConnexionFailed">{{ messageConnexionFailed }}</div>
+  </form>
+  
