@@ -35,6 +35,22 @@ class MongoDBManager:
             # Capture des exceptions et affichage d'un message d'erreur en cas de problème lors de la connexion
             print("Erreur lors de la connexion a la base de donnees :", e)
             return False
+        
+
+    # Méthode pour vérifier qu'un utilisateur existe dans la base de données lors d'une tentative de connexion
+    def verify_user_credentials(self, username, password):
+        try:
+            user = self.db["Utilisateurs"].find_one({"username": username, "mot_de_passe": password})
+            if user:
+                print("Informations de connexion valides pour l'utilisateur :", user)
+                return True
+            else:
+                print("Nom d'utilisateur ou mot de passe incorrect.")
+                return False
+        except Exception as e:
+            print("Erreur lors de la vérification des informations de connexion de l'utilisateur :", e)
+            return False
+        
 
     # Méthode pour insérer un utilisateur dans la collection Utilisateurs
     def insert_user(self, document):
@@ -148,14 +164,9 @@ if __name__ == "__main__":
             print("\nDocument insere avec l ID :", insertion_result.inserted_id)
 
 
-        # Récupération de tous les documents de la collection "Utilisateurs"
-        '''
-        utilisateurs = db_manager.find_all("Utilisateurs")
-        print("\nutilisateurs existants:\n")
-        for utilisateur in utilisateurs:
-            print(utilisateur)
-        '''
-
+        # Vérifier les informaions d'un utilisateur lors d'une tentative de connexion
+            #verify_user_credentials
+       
         # Tester l'ajout d'une conversation pour un utilisateur
         conversation = {"nom": "conversation_test", "messages": []}
         conversation_id = None  # Initialisation de la variable pour stocker l'ID de la conversation
