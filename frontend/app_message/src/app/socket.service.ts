@@ -2,6 +2,7 @@
 import { Injectable } from '@angular/core';
 import { Socket } from 'ngx-socket-io';
 import { Observable } from 'rxjs';
+import { Message } from './message.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -41,8 +42,20 @@ export class SocketService {
     this.socket.emit('join_conversation', { conversation_id: conversationId });
   }
 
-  sendMessage(data: { content: string, conversation_id: string }): void {
+  sendMessage(conversationId: string, message: Message): void {
+    const data = {
+      conversation_id: conversationId,
+      message: message
+    };
     this.socket.emit('send_message', data);
   }
 
+  
+  receiveMessage(): Observable<{ conversation_id: string, message: Message }> {
+    return new Observable<{ conversation_id: string, message: Message }>(observer => {
+      this.socket.on('new_message_to_receive', (data: { conversation_id: string, message: Message }) => {
+        observer.next(data);
+      });
+    });
+  }
 }

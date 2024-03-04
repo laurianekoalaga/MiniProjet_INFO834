@@ -50,8 +50,6 @@ export class LoginComponent {
         if (data.response_code == 1) {
           // Enregistrez le token dans le localStorage
           localStorage.setItem('authToken', data.authToken);
-          console.log(localStorage.getItem('authToken'))
-          console.log(localStorage.getItem('clientId'))          
           
           // Envoyez la demande d'accès à la messagerie avec le token
           this.socketService.access_messaging_request(data.authToken);
@@ -60,8 +58,6 @@ export class LoginComponent {
           this.router.navigate(['/messaging']);
         } else {
           this.messageConnexionFailed = data.response_message;
-          console.log("clientId from login.component.ts onSubmit :", localStorage.getItem('authToken'))          
-          console.log("clientId from login.component.ts onSubmit :", localStorage.getItem('clientId'))          
         }
      });
   }

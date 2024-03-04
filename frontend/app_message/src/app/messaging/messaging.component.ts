@@ -2,6 +2,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SocketService } from '../socket.service';
+import { jwtDecode } from 'jwt-decode';
+import { Message } from '../message.interface';
+import { Conversation } from '../conversation.interface';
 
 @Component({
   selector: 'app-messaging',
@@ -10,22 +13,38 @@ import { SocketService } from '../socket.service';
 })
 export class MessagingComponent implements OnInit {
 
-  conversations = [
-    { id: 'conversation_1', name: 'Vincent Porter', avatar: './assets/images/avatar_image.jpg', lastSeen: 7 },
-    { id: 'conversation_2', name: 'Rosine Soro', avatar: './assets/images/avatar_image.jpg', lastSeen: 2 },
+  username: string = '';
+
+  conversations: Conversation[] = [
+    {
+      _id: '14564',
+      nom: 'Rosine',
+      messages: []
+    }
   ];
 
   selectedConversationId: string | null = null;
   selectedConversationName: string | null = null;
   selectedConversationLastSeen: number | null = null;
 
-  messages = [
-    { content: 'Votre message ici', timestamp: new Date(), isMine: true },
-    { content: 'Message reçu ici', timestamp: new Date(), isMine: false },
-    // Ajoutez d'autres messages fictifs au besoin
+  messages: Message[] = [
+    {
+      _id: 1,
+      emetteur: 'utilisateur1',
+      contenu: 'Bonjour, comment ça va ?',
+      timestamp: new Date('2024-02-22T12:00:00Z')
+    },
+    {
+      _id: 2,
+      emetteur: 'utilisateur2',
+      contenu: 'Salut ! Ça va bien, et toi ?',
+      timestamp: new Date('2024-02-22T12:05:00Z')
+    },
   ];
 
   newMessage: string = '';
+
+
   constructor(private router: Router, private socketService: SocketService) {}
 
   ngOnInit(): void {
@@ -36,13 +55,25 @@ export class MessagingComponent implements OnInit {
       this.router.navigate(['/login']);
       return;
     } else {
-
       // Vérifier l'accès à la messagerie via le service socket
       this.socketService.access_messaging_request(authToken).subscribe(
         (data) => {
           if (data.response_code !== 1) {
             // Rediriger vers la page de connexion si l'accès est refusé
             this.router.navigate(['/login']);
+          } else {
+            const decodedToken: any = jwtDecode(authToken);
+            this.username = decodedToken.username;
+
+            // Initialisation des valeurs par défaut ou chargement des données depuis le serveur
+            if (this.conversations.length > 0) {
+              this.onSelectConversation(this.conversations[0]._id);
+            }
+
+            // Souscrire à la réception de nouveaux messages
+            this.socketService.receiveMessage().subscribe(data => {
+              this.handleNewMessage(data);
+            });
           }
         },
         (error) => {
@@ -52,10 +83,7 @@ export class MessagingComponent implements OnInit {
       );
     }
 
-    // Initialisation des valeurs par défaut ou chargement des données depuis le serveur
-    if (this.conversations.length > 0) {
-      this.selectedConversationId + this.conversations[0].id;
-    }
+
 
   }
 
@@ -80,22 +108,39 @@ export class MessagingComponent implements OnInit {
   onSelectConversation(conversationId: string): void {
     this.selectedConversationId = conversationId;
     this.socketService.joinConversation(conversationId);
-
   }
 
   sendMessage(): void {
     if (this.selectedConversationId && this.newMessage.trim() !== '') {
-      const newMessage = {
-        content: this.newMessage,
-        timestamp: new Date(),
-        isMine: true // Assumez que l'utilisateur actuel envoie le message
+      const newMessage: Message = {
+        _id: this.messages.length + 1,
+        emetteur: this.username,
+        contenu: this.newMessage,
+        timestamp: new Date()
       };
-
-      this.messages.push(newMessage);
-      // Envoyez le message au serveur ou effectuez toute autre logique nécessaire
-      // Réinitialisez le champ de saisie après l'envoi du message
+  
+      this.socketService.sendMessage(this.selectedConversationId, newMessage)
       this.newMessage = '';
+
     }
+  }
+  
+
+  // Méthode pour traiter les nouveaux messages
+  handleNewMessage(data: { conversation_id: string, message: any }): void {
+    const { conversation_id, message } = data;
+    // Vérifier si la conversation du message correspond à celle actuellement sélectionnée
+    if (this.selectedConversationId === conversation_id) {
+      // Ajouter le message à la liste des messages
+      this.messages.push(message);
+    }
+  }
+
+  // Méthode pour déterminer la classe CSS en fonction de l'émetteur du message
+  getMessageClass(message: Message): { messageClass: string, divClass: string } {
+    let messageClass = message.emetteur == this.username ? 'my-message float-right' : 'other-message float-left';
+    let divClass = message.emetteur == this.username ? 'message-data text-right' : 'message-data text-left';
+    return { messageClass, divClass };
   }
 
 }

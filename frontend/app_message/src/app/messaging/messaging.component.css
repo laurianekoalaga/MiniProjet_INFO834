@@ -168,13 +168,13 @@ body{
 
 /* Styles pour les messages reçus */
 .chat .chat-history .other-message {
-    background: #e8f1f3;
+    background: #EFC3F0;
     text-align: left;
     overflow-wrap: break-word; /* Ajout de cette propriété pour gérer le débordement du texte */
 }
 
 .chat .chat-history .other-message:after {
-    border-bottom-color: #e8f1f3;
+    border-bottom-color: #EFC3F0;
     left: 30%; /* Ajuste la position de la flèche pour les messages reçus */
 }
 
@@ -182,6 +182,24 @@ body{
 .chat .chat-message {
     padding: 20px
 }
+
+
+#messageInput:focus {
+    box-shadow: none;
+}
+
+
+
+#sendMessageButton {
+    background-color: purple;
+    color: white;
+    border-color: purple;
+}
+
+#sendMessageButton:focus {
+    box-shadow: none;
+}
+
 
 .online,
 .offline,
