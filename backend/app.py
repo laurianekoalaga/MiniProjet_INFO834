@@ -47,7 +47,7 @@ def handle_connexion_request(data):
 
     # Vérifier si l'identifiant unique est déjà connecté
     if clientId not in connected_clients.keys():
-        if username == 'andrei':
+        if username == 'andrei' or username == "pafpaf":
             print(f'{username} just connected with client id: ({clientId}).')
 
             authToken = generate_authToken(username, clientId)
@@ -133,16 +133,20 @@ def handle_access_messaging_request(authToken):
 @socketio.on('join_conversation')
 def handle_join_conversation(data):
     conversation_id = data.get('conversation_id')
-    room = f'conversation_{conversation_id}'
-    join_room(room)
-
+    print(f"handle_join_conversation called for conversation id {conversation_id}")
+    join_room(conversation_id)
 
 @socketio.on('send_message')
 def handle_send_message(data):
     conversation_id = data.get('conversation_id')
-    message_content = data.get('content')
-    room = f'conversation_{conversation_id}'
-    emit('receive_message', {'content': message_content}, room=room)
+    message = data.get('message')
+
+    print(f"send_message called for conversation id : {conversation_id}\nMessage data : {message}\n")
+
+    data = {'conversation_id': conversation_id, 'message': message}
+
+    emit('new_message_to_receive', data, room=conversation_id)
+
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
