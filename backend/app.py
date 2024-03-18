@@ -3,12 +3,14 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room
 import jwt 
 from apiMongoDB import MongoDBManager
+from apiRedis import RedisManager
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 SECRET_KEY = 'sk2'
-db_manager = MongoDBManager("mongodb://localhost:27017/")
-db_manager.connect("ProjInfo834")
+mongodb_manager = MongoDBManager("mongodb://localhost:27017/")
+mongodb_manager.connect("ProjInfo834")
+redis_manager = RedisManager()
 connected_clients = {}
 
 def generate_authToken(username, clientId):
@@ -47,12 +49,11 @@ def handle_connexion_request(data):
     username = data.get('username')
     clientId = data.get('clientId')     
     hashedPassword = data.get('hashedPassword')
-    print("password: ",hashedPassword)
 
     # Vérifier si l'identifiant unique est déjà connecté
     try:
         if clientId not in connected_clients.keys():
-            response_from_db = db_manager.verify_user_credentials(username, hashedPassword)
+            response_from_db = mongodb_manager.verify_user_credentials(username, hashedPassword)
             print(response_from_db)
             if response_from_db.get('response_code') == 1:
                 print(f'{username} just connected with client id: ({clientId}).')
@@ -63,6 +64,7 @@ def handle_connexion_request(data):
                     'response_message': f'Connexion accepted for username {username}.',
                     'authToken': authToken
                 }
+                redis_manager.add_connexion(username, clientId)
 
             else:
                 response = {
@@ -99,6 +101,8 @@ def handle_deconnexion_request(data):
             'response_code': 1,
             'response_message': 'Deconnexion réussie côté serveur.'
         }
+        redis_manager.add_deconnexion(username, clientId)
+
 
     else :
         response = {
@@ -118,7 +122,7 @@ def handle_access_messaging_request(authToken):
         clientId = payload.get('clientId')
         print("authToken accepted in access_messaging_request call")
 
-        response_from_db = db_manager.get_user_conversations_without_msg(username)
+        response_from_db = mongodb_manager.get_user_conversations_without_msg(username)
         if response_from_db.get('response_code') == 1:
             response = {
                 'response_code': 1,
@@ -154,7 +158,7 @@ def handle_get_messages(data):
     try :
         conversation_id = data.get('conversation_id')
         print(f"handle_get_messages called for conversation id {conversation_id}")
-        response_from_db = db_manager.get_messages_for_conversation(conversation_id)
+        response_from_db = mongodb_manager.get_messages_for_conversation(conversation_id)
         if response_from_db.get('response_code') == 1:
             response = {
                 'response_code': 1,
@@ -180,7 +184,7 @@ def handle_send_message(data):
     message = data.get('message')
 
     print(f"send_message called for conversation id : {conversation_id}, message data : {message}\n")
-    db_manager.add_message(conversation_id=conversation_id, message=message)
+    mongodb_manager.add_message(conversation_id=conversation_id, message=message)
     emit('new_message_to_receive', data, room=conversation_id)
 
 

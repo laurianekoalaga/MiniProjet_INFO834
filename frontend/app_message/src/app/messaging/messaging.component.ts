@@ -101,6 +101,7 @@ export class MessagingComponent implements OnInit, OnDestroy {
     this.socketService.joinConversation(conversation._id);
     this.socketService.getMessages(conversation._id, (messages: Message[]) => {
       this.messages = messages;
+      this.scrollToBottomOfChatHistory();
     });  
   }
 
@@ -126,9 +127,8 @@ export class MessagingComponent implements OnInit, OnDestroy {
     if (this.selectedConversationId === conversation_id) {
       // Ajouter le message à la liste des messages
       this.messages.push(message);
-        // Faire défiler vers le bas pour afficher le dernier message ajouté
-      const chatHistory = document.querySelector('.chat-history');
-      //chatHistory.scrollTop = chatHistory.scrollHeight;
+      // Faire défiler vers le bas pour afficher le dernier message ajouté
+      this.scrollToBottomOfChatHistory();
     }
   }
 
@@ -139,4 +139,15 @@ export class MessagingComponent implements OnInit, OnDestroy {
     return { messageClass, divClass };
   }
 
+
+  scrollToBottomOfChatHistory(): void {
+    const chatHistory = document.querySelector('.chat-history');
+    if (chatHistory) {
+        requestAnimationFrame(() => {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        });
+    } else {
+        console.error('La classe .chat-history n\'a pas été trouvée dans le document.');
+    }
+}
 }
