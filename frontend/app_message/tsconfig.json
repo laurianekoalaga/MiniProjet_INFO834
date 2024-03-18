@@ -24,6 +24,7 @@
       "dom"
     ]
   },
+  "types": ["bcryptjs"],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

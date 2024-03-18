@@ -1,5 +1,5 @@
 // socket.service.ts
-import { Injectable } from '@angular/core';
+import { Injectable, EventEmitter } from '@angular/core';
 import { Socket } from 'ngx-socket-io';
 import { Observable } from 'rxjs';
 import { Message } from './message.interface';
@@ -10,17 +10,19 @@ import { Message } from './message.interface';
 
 export class SocketService {
 
+  newMessageReceived: EventEmitter<any> = new EventEmitter<any>();
+
   constructor(private socket: Socket) { }
 
-  connexion_request(username: string, clientId: string): Observable<any> {
+  connexion_request(username: string, clientId: string, hashedPassword: string): Observable<any> {
     return new Observable<any>(observer => {
-      this.socket.emit('connexion_request', { username, clientId });
+      this.socket.emit('connexion_request', { username, clientId, hashedPassword });
       this.socket.on('response_to_connexion_request', (data: any) => {
         observer.next(data);
       });
       this.socket.on('message', (data: any) => {
         observer.next(data);
-      });
+      }); 
     });
   }
 
@@ -42,6 +44,13 @@ export class SocketService {
     this.socket.emit('join_conversation', { conversation_id: conversationId });
   }
 
+  getMessages(conversationId: string, callback: (messages: Message[]) => void): void {
+    this.socket.emit('get_messages', { conversation_id: conversationId });
+    this.socket.on('messages_for_conversation', (data: any) => {
+      callback(data.response_data);
+    });
+  }
+
   sendMessage(conversationId: string, message: Message): void {
     const data = {
       conversation_id: conversationId,
@@ -49,7 +58,6 @@ export class SocketService {
     };
     this.socket.emit('send_message', data);
   }
-
   
   receiveMessage(): Observable<{ conversation_id: string, message: Message }> {
     return new Observable<{ conversation_id: string, message: Message }>(observer => {

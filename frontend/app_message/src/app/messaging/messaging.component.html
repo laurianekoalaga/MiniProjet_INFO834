@@ -16,7 +16,7 @@
                   </div>
                   <ul class="list-unstyled chat-list mt-2 mb-0">
                       <li *ngFor="let conversation of conversations" 
-                      (click)="onSelectConversation(conversation._id)"
+                      (click)="onSelectConversation(conversation)"
                       class="clearfix" 
                       [class.active]="selectedConversationId === conversation._id"
                       >

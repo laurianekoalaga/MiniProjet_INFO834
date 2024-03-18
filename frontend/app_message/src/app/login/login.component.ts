@@ -3,6 +3,8 @@ import { Component } from '@angular/core';
 import { SocketService } from '../socket.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Router } from '@angular/router';
+import * as bcrypt from 'bcryptjs';
+
 
 @Component({
   selector: 'app-login',
@@ -12,6 +14,7 @@ import { Router } from '@angular/router';
 export class LoginComponent {
 
   username: string = '';
+  password: string = '';
   clientId: string = '';
   isFormInvalid: boolean = true;
   messageConnexionFailed: string = '';
@@ -45,7 +48,11 @@ export class LoginComponent {
   }
 
   onSubmit(): void {
-    this.socketService.connexion_request(this.username, this.clientId).subscribe(
+    console.log("onSubmit called")
+    // Hasher le mot de passe avec bcrypt avant de l'envoyer au serveur
+    // const hashedPassword = bcrypt.hashSync(this.password, 10);
+
+    this.socketService.connexion_request(this.username, this.clientId, this.password).subscribe(
       (data) => {
         if (data.response_code == 1) {
           // Enregistrez le token dans le localStorage
@@ -64,8 +71,16 @@ export class LoginComponent {
 
 
   onUsernameChange(): void {
-    this.isFormInvalid = this.username.trim() === '';
+    console.log(this.username.trim() === '' && this.password.trim() === '')
+    this.isFormInvalid = this.username.trim() === '' || this.password.trim() === '';
     this.messageConnexionFailed = '';
   }
+
+  onPasswordChange(): void {
+    console.log(this.username.trim() === '' && this.password.trim() === '')
+    this.isFormInvalid = this.username.trim() === '' || this.password.trim() === '';
+    this.messageConnexionFailed = '';
+  }
+
 }
 

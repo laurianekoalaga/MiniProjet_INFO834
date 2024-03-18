@@ -168,13 +168,13 @@ body{
 
 /* Styles pour les messages reçus */
 .chat .chat-history .other-message {
-    background: #EFC3F0;
+    background: #f1def6;
     text-align: left;
     overflow-wrap: break-word; /* Ajout de cette propriété pour gérer le débordement du texte */
 }
 
 .chat .chat-history .other-message:after {
-    border-bottom-color: #EFC3F0;
+    border-bottom-color: #f1def6;
     left: 30%; /* Ajuste la position de la flèche pour les messages reçus */
 }
 
@@ -191,9 +191,9 @@ body{
 
 
 #sendMessageButton {
-    background-color: purple;
+    background-color: rgb(165, 28, 83);
     color: white;
-    border-color: purple;
+    border-color: rgb(165, 28, 83);
 }
 
 #sendMessageButton:focus {
@@ -235,14 +235,14 @@ body{
 }
 
 #logoutButton {
-    background-color: purple;
+    background-color: rgb(165, 28, 83);
     color: white;
-    border-color: purple;
+    border-color: rgb(165, 28, 83);
 }
   
 #logoutButton:hover {
-    background-color: darkviolet;
-    border-color: darkviolet;
+    background-color: rgb(165, 28, 83);
+    border-color: rgb(165, 28, 83);
 }
 
 
@@ -281,7 +281,7 @@ body{
     }
 }
 
-@media only screen and (min-device-width: 768) and (max-device-width: 1024px) and (orientation: landscape) and (-webkit-min-device-pixel-ratio: 1) {
+@media only screen and (min-device-width: 768) and (max-device-width: 9999px) and (orientation: landscape) and (-webkit-min-device-pixel-ratio: 1) {
     .chat-app .chat-list {
         height: 480px;
         overflow-x: auto

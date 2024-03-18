@@ -1,46 +1,30 @@
 // messaging.component.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { SocketService } from '../socket.service';
 import { jwtDecode } from 'jwt-decode';
 import { Message } from '../message.interface';
 import { Conversation } from '../conversation.interface';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-messaging',
   templateUrl: './messaging.component.html',
   styleUrls: ['./messaging.component.css']
 })
-export class MessagingComponent implements OnInit {
+export class MessagingComponent implements OnInit, OnDestroy {
+
+  private subscriptions: Subscription[] = [];
 
   username: string = '';
 
-  conversations: Conversation[] = [
-    {
-      _id: '14564',
-      nom: 'Rosine',
-      messages: []
-    }
-  ];
+  conversations: Conversation[] = [];
 
+  selectedConversation: Conversation | null = null
   selectedConversationId: string | null = null;
   selectedConversationName: string | null = null;
   selectedConversationLastSeen: number | null = null;
-
-  messages: Message[] = [
-    {
-      _id: 1,
-      emetteur: 'utilisateur1',
-      contenu: 'Bonjour, comment ça va ?',
-      timestamp: new Date('2024-02-22T12:00:00Z')
-    },
-    {
-      _id: 2,
-      emetteur: 'utilisateur2',
-      contenu: 'Salut ! Ça va bien, et toi ?',
-      timestamp: new Date('2024-02-22T12:05:00Z')
-    },
-  ];
+  messages: Message[] = [];
 
   newMessage: string = '';
 
@@ -64,16 +48,19 @@ export class MessagingComponent implements OnInit {
           } else {
             const decodedToken: any = jwtDecode(authToken);
             this.username = decodedToken.username;
-
+            this.conversations = data.response_data
+            
             // Initialisation des valeurs par défaut ou chargement des données depuis le serveur
             if (this.conversations.length > 0) {
-              this.onSelectConversation(this.conversations[0]._id);
+              this.onSelectConversation(this.conversations[0]);
             }
 
             // Souscrire à la réception de nouveaux messages
-            this.socketService.receiveMessage().subscribe(data => {
-              this.handleNewMessage(data);
-            });
+            this.subscriptions.push(
+              this.socketService.receiveMessage().subscribe(data => {
+                this.handleNewMessage(data);
+              })
+            );
           }
         },
         (error) => {
@@ -82,9 +69,11 @@ export class MessagingComponent implements OnInit {
         }
       );
     }
+  }
 
-
-
+  ngOnDestroy(): void {
+    // Désabonnez-vous de tous les observables lors de la destruction du composant
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
   }
 
   // Méthode appelée lors du clic sur le bouton de déconnexion
@@ -98,17 +87,23 @@ export class MessagingComponent implements OnInit {
 
       // Supprimer le token d'authentification du stockage local
       localStorage.removeItem('authToken');
-
+    
       // Rediriger vers la page de connexion
       this.router.navigate(['/login']);
     }
   }
 
 
-  onSelectConversation(conversationId: string): void {
-    this.selectedConversationId = conversationId;
-    this.socketService.joinConversation(conversationId);
+  onSelectConversation(conversation: Conversation): void {
+    this.selectedConversation = conversation;
+    this.selectedConversationId = conversation._id;
+    this.selectedConversationName = conversation.nom;
+    this.socketService.joinConversation(conversation._id);
+    this.socketService.getMessages(conversation._id, (messages: Message[]) => {
+      this.messages = messages;
+    });  
   }
+
 
   sendMessage(): void {
     if (this.selectedConversationId && this.newMessage.trim() !== '') {
@@ -118,14 +113,12 @@ export class MessagingComponent implements OnInit {
         contenu: this.newMessage,
         timestamp: new Date()
       };
-  
       this.socketService.sendMessage(this.selectedConversationId, newMessage)
       this.newMessage = '';
 
     }
   }
   
-
   // Méthode pour traiter les nouveaux messages
   handleNewMessage(data: { conversation_id: string, message: any }): void {
     const { conversation_id, message } = data;
@@ -133,6 +126,9 @@ export class MessagingComponent implements OnInit {
     if (this.selectedConversationId === conversation_id) {
       // Ajouter le message à la liste des messages
       this.messages.push(message);
+        // Faire défiler vers le bas pour afficher le dernier message ajouté
+      const chatHistory = document.querySelector('.chat-history');
+      //chatHistory.scrollTop = chatHistory.scrollHeight;
     }
   }
 
