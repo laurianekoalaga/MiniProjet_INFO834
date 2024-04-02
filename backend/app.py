@@ -69,17 +69,18 @@ def handle_connexion_request(data):
             else:
                 response = {
                     'response_code': 1000,
-                    'response_message': response_from_db.get('response_message')
+                    'response_message': str(response_from_db.get('response_message'))
                 }
         else:
             response = {
                 'response_code': 301,
                 'response_message': 'Server refused connexion: clientID already used.'
             }
+
     except Exception as e:
         response = {
             'response_code': 1000,
-            'response_message': e
+            'response_message': str(e)
             }
         
     emit('response_to_connexion_request', response)
@@ -143,7 +144,7 @@ def handle_access_messaging_request(authToken):
         }
         print("authToken not accepted in access_messaging_request call")
 
-
+    print(response)
     emit('response_to_access_messaging_request', response)
 
 @socketio.on('join_conversation')
@@ -174,7 +175,7 @@ def handle_get_messages(data):
     except Exception as e:
         response = {
             'response_code': 1000,
-            'response_message': e
+            'response_message': str(e)
         }
     emit('messages_for_conversation', response)
 

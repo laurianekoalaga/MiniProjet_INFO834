@@ -4,6 +4,7 @@ import { SocketService } from '../socket.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Router } from '@angular/router';
 import * as bcrypt from 'bcryptjs';
+import { Subscription } from 'rxjs';
 
 
 @Component({
@@ -18,6 +19,8 @@ export class LoginComponent {
   clientId: string = '';
   isFormInvalid: boolean = true;
   messageConnexionFailed: string = '';
+  private subscriptions: Subscription[] = [];
+
 
   constructor(private socketService: SocketService, private router: Router) {
     // Vérifiez si clientId existe déjà dans le localStorage
@@ -27,57 +30,58 @@ export class LoginComponent {
     localStorage.setItem('clientId', this.clientId);
   }
 
+  // Méthode poour le désabonnement de tous les observables
+  cleanupSubscriptions(): void {
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
+
+  }
+
+
   ngOnInit(): void {
-    // Vérifier si un token existe dans le localStorage
+    // Vérifier si un token d'authentification existe dans le localStorage
     const storedToken = localStorage.getItem('authToken');
     console.log("storedTocken from login.component.ts ngOnInit :", storedToken)
     console.log("clientId from login.component.ts ngOnInit :", localStorage.getItem('clientId'))          
 
     if (storedToken) {
-      // Si un token existe, émettre une demande d'accès à la messagerie
-      this.socketService.access_messaging_request(storedToken).subscribe(
-        (data) => {
-          if (data.response_code == 1) {
-            this.router.navigate(['/messaging']);
-          } else {
-            console.log(data.response_message);  // Gérer le cas où l'accès est refusé
-          }
-        }
-      );
+      // Si un token existe accéder à la page de messagerie
+      this.router.navigate(['/messaging']);
     }
   }
 
-  onSubmit(): void {
-    console.log("onSubmit called")
-    // Hasher le mot de passe avec bcrypt avant de l'envoyer au serveur
-    // const hashedPassword = bcrypt.hashSync(this.password, 10);
+  ngOnDestroy(): void {
+    console.log("on destroy")
+    this.cleanupSubscriptions();
+  }
 
-    this.socketService.connexion_request(this.username, this.clientId, this.password).subscribe(
+  onSubmit(): void {
+    // Hasher le mot de passe avec bcrypt avant de l'envoyer au serveur
+    const hashedPassword = bcrypt.hashSync(this.password, 10);
+
+    const subscription = this.socketService.connexion_request(this.username, this.clientId, this.password).subscribe(
       (data) => {
+        console.log("test")
         if (data.response_code == 1) {
           // Enregistrez le token dans le localStorage
           localStorage.setItem('authToken', data.authToken);
-          
-          // Envoyez la demande d'accès à la messagerie avec le token
-          this.socketService.access_messaging_request(data.authToken);
-  
+
           // Naviguez vers la page de messagerie
           this.router.navigate(['/messaging']);
         } else {
           this.messageConnexionFailed = data.response_message;
         }
      });
+     this.subscriptions.push(subscription);
   }
 
-
+  // Méthode pour vérifier si le username dans le formulaire est conforme
   onUsernameChange(): void {
-    console.log(this.username.trim() === '' && this.password.trim() === '')
     this.isFormInvalid = this.username.trim() === '' || this.password.trim() === '';
     this.messageConnexionFailed = '';
   }
 
+  // Méthode pour vérifier si le password dans le formulaire est conforme
   onPasswordChange(): void {
-    console.log(this.username.trim() === '' && this.password.trim() === '')
     this.isFormInvalid = this.username.trim() === '' || this.password.trim() === '';
     this.messageConnexionFailed = '';
   }

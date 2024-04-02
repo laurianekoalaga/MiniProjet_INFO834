@@ -23,7 +23,7 @@ export class MessagingComponent implements OnInit, OnDestroy {
   selectedConversation: Conversation | null = null
   selectedConversationId: string | null = null;
   selectedConversationName: string | null = null;
-  selectedConversationLastSeen: number | null = null;
+  //selectedConversationLastSeen: number | null = null;
   messages: Message[] = [];
 
   newMessage: string = '';
@@ -32,25 +32,31 @@ export class MessagingComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private socketService: SocketService) {}
 
   ngOnInit(): void {
+
+    // Récupérer le token d'authentification
     const authToken = localStorage.getItem('authToken');
 
     if (!authToken) {
       // Rediriger vers la page de connexion si le token n'est pas présent
       this.router.navigate(['/login']);
-      return;
+
     } else {
-      // Vérifier l'accès à la messagerie via le service socket
-      this.socketService.access_messaging_request(authToken).subscribe(
+      // Si token présent, demander l'accès à la messagerie
+      const subscription = this.socketService.access_messaging_request(authToken).subscribe(
+
         (data) => {
-          if (data.response_code !== 1) {
-            // Rediriger vers la page de connexion si l'accès est refusé
+          console.log('aaa')
+          if (data.response_code != 1) {
+            // Rediriger vers la page de connexion si l'accès est refusé (token compromis)
             this.router.navigate(['/login']);
+
           } else {
+            // Sinon accès à la messagerie
             const decodedToken: any = jwtDecode(authToken);
             this.username = decodedToken.username;
             this.conversations = data.response_data
             
-            // Initialisation des valeurs par défaut ou chargement des données depuis le serveur
+            // Sélection par défaut de la première conversation dans la liste
             if (this.conversations.length > 0) {
               this.onSelectConversation(this.conversations[0]);
             }
@@ -64,16 +70,22 @@ export class MessagingComponent implements OnInit, OnDestroy {
           }
         },
         (error) => {
-          // Gérer les erreurs, par exemple rediriger vers la page de connexion
+          // Si autres erreurs rediriger vers la page de connexion
           this.router.navigate(['/login']);
         }
       );
+      this.subscriptions.push(subscription);
     }
   }
 
-  ngOnDestroy(): void {
-    // Désabonnez-vous de tous les observables lors de la destruction du composant
+  // Méthode poour le désabonnement de tous les observables
+  cleanupSubscriptions(): void {
     this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    //this.subscriptions = [];
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupSubscriptions();
   }
 
   // Méthode appelée lors du clic sur le bouton de déconnexion
@@ -87,33 +99,44 @@ export class MessagingComponent implements OnInit, OnDestroy {
 
       // Supprimer le token d'authentification du stockage local
       localStorage.removeItem('authToken');
+      this.cleanupSubscriptions();
     
       // Rediriger vers la page de connexion
       this.router.navigate(['/login']);
     }
   }
 
-
+  // Méthode appelée lors du clic sur une conversation
   onSelectConversation(conversation: Conversation): void {
     this.selectedConversation = conversation;
     this.selectedConversationId = conversation._id;
     this.selectedConversationName = conversation.nom;
+
+    // Rejoindre la room socketio associée à la conversation
     this.socketService.joinConversation(conversation._id);
+
+    // Récupération des messages de cette conversation
     this.socketService.getMessages(conversation._id, (messages: Message[]) => {
       this.messages = messages;
+      // Descendre aux derniers messages
       this.scrollToBottomOfChatHistory();
     });  
   }
 
-
+  // Méthode appelée lors de l'envoi d'un message
   sendMessage(): void {
     if (this.selectedConversationId && this.newMessage.trim() !== '') {
+      // Création d'un nouvel objet message
       const newMessage: Message = {
         _id: this.messages.length + 1,
         emetteur: this.username,
         contenu: this.newMessage,
         timestamp: new Date()
       };
+
+      console.log('sendMessage in messaging.ts called');
+
+      // Envoi du message
       this.socketService.sendMessage(this.selectedConversationId, newMessage)
       this.newMessage = '';
 
@@ -139,7 +162,7 @@ export class MessagingComponent implements OnInit, OnDestroy {
     return { messageClass, divClass };
   }
 
-
+  // Méthode pour se placer au niveau des derniers messages dans la conversation
   scrollToBottomOfChatHistory(): void {
     const chatHistory = document.querySelector('.chat-history');
     if (chatHistory) {

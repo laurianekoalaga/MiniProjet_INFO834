@@ -43,7 +43,7 @@ class MongoDBManager:
             # Capture des exceptions et affichage d'un message d'erreur en cas de problème lors de la connexion
             response = {
                 'response_code': 1000,
-                'response_message': e
+                'response_message': str(e)
             }
             return response
         
@@ -56,7 +56,7 @@ class MongoDBManager:
                 print("Informations de connexion valides pour l'utilisateur :", user)
                 response = {
                     'response_code': 1,
-                    'response_message': f'Verification of credentials OK for user {user}'
+                    'response_message': f'Verification of credentials OK for user {username}'
                 }
                 return response
             else:
@@ -70,7 +70,7 @@ class MongoDBManager:
             print("Erreur lors de la vérification des informations de connexion de l'utilisateur :", e)
             response = {
                 'response_code': 1000,
-                'response_message': e
+                'response_message': str(e)
             }
             return response  
 
@@ -140,7 +140,7 @@ class MongoDBManager:
         except Exception as e:
                 response = {
                     'response_code': 1000,
-                    'reponse_message': e
+                    'reponse_message': str(e)
                 }
                 return response
 
@@ -171,12 +171,13 @@ class MongoDBManager:
                     'response_code': 601,
                     'reponse_message': f'Username {username} does not exist. Could not get conversations.',
                 }
-                return response            
+                return response   
+                     
         except Exception as e:
             print("Erreur lors de la récupération des conversations de l'utilisateur :", e)
             response = {
                 'response_code': 1000,
-                'reponse_message': e
+                'reponse_message': str(e)
             }
             return response
     
@@ -208,12 +209,13 @@ class MongoDBManager:
                     'response_code': 601,
                     'reponse_message': f'Username {username} does not exist. Could not get conversations.',
                 }
-                return response            
+                return response    
+                    
         except Exception as e:
             print("Erreur lors de la récupération des conversations de l'utilisateur :", e)
             response = {
                 'response_code': 1000,
-                'reponse_message': e
+                'reponse_message': str(e)
             }
             return response
         
@@ -242,7 +244,7 @@ class MongoDBManager:
             print("Erreur lors de la récupération des messages de la conversation :", e)
             response = {
                 'response_code': 1000,
-                'reponse_message': e
+                'reponse_message': str(e)
             }
             return response
     
@@ -269,7 +271,7 @@ class MongoDBManager:
             print("Erreur lors de la récupération des informations de l'utilisateur :", e)
             response = {
                 'response_code': 1000,
-                'reponse_message': e,
+                'reponse_message': str(e),
             }
             return response
 
