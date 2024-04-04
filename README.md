@@ -5,7 +5,7 @@ Pour lancer et tester la messagerie, suivre ces étapes après avoir fait un git
 #### MongoDB :  
 1. Lancer un serveur Mongod sur le port 27017.
 2. Exécuter le fichier <i>apiMongoDB.py<i> afin de créer la base de données nommée par défaut <i>MessagingAppINFO834<i> dans MongoDB et d'y importer les utilisateurs et conversations d'exemples.  
-   <b>/!\<b> Si vous aviez déjà une base de données ayant le nom <i>MessagingAppINFO834<i>, elle sera supprimée. Pour éviter 
+   /!\ Si vous aviez déjà une base de données ayant le nom <i>MessagingAppINFO834<i>, elle sera supprimée. Pour éviter 
    cela vous devrez modifier la valeur de <i>database_name<i> dans le constructeur de la classe <i>MongoDBManger<i>.
   
 #### Redis :
@@ -13,7 +13,7 @@ Pour lancer et tester la messagerie, suivre ces étapes après avoir fait un git
   
 #### Serveur Flask :
 5. Lancer le serveur Flask en exécutant le fichier <i>app.py<i>.  
-   <b>/!\<b> Les librairies nécessaires sont <i>flask<i>, <i>flask_socketio<i> & <i>jwt<i>.  
+   /!\ Les librairies nécessaires sont <i>flask<i>, <i>flask_socketio<i> & <i>jwt<i>.  
 
 #### Angular :  
 (Prérequis : Node.js et Angular installé).  
