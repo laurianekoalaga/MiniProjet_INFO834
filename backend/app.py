@@ -7,12 +7,13 @@ from apiRedis import RedisManager
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
-SECRET_KEY = 'sk2'
-mongodb_manager = MongoDBManager("mongodb://localhost:27017/")
-mongodb_manager.connect("ProjInfo834")
+SECRET_KEY = 'sk2' # clé pour les JWT
+mongodb_manager = MongoDBManager()
+mongodb_manager.connect()
 redis_manager = RedisManager()
-connected_clients = {}
+connected_clients = {} # navigateur (uuid) connectés
 
+# Méthode pour générer un JWT
 def generate_authToken(username, clientId):
     payload = {
         'username': username,
@@ -21,7 +22,7 @@ def generate_authToken(username, clientId):
     authToken = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
     return authToken
 
-
+# Méthode pour vérifier l'intégrité d'un JWT
 def validate_authToken(authToken):
     try:
         payload = jwt.decode(authToken, SECRET_KEY, algorithms=['HS256'])
@@ -36,25 +37,28 @@ def validate_authToken(authToken):
 def index():
     return render_template('index.html')
 
+# Connexion d'un socket
 @socketio.on('connect')
 def handle_connect():
     print(f"Client connected with request_sid : {request.sid}")
 
+# Deconnexion d'un socket
 @socketio.on('disconnect')
 def handle_disconnect():
     print(f"Client disconnected with request_sid : {request.sid}")
 
+# Traitement de la demande de connexion d'un utilisateur
 @socketio.on('connexion_request')
 def handle_connexion_request(data):
     username = data.get('username')
     clientId = data.get('clientId')     
     hashedPassword = data.get('hashedPassword')
+    print("aaaaaaaaaaa", hashedPassword)
 
     # Vérifier si l'identifiant unique est déjà connecté
     try:
         if clientId not in connected_clients.keys():
             response_from_db = mongodb_manager.verify_user_credentials(username, hashedPassword)
-            print(response_from_db)
             if response_from_db.get('response_code') == 1:
                 print(f'{username} just connected with client id: ({clientId}).')
                 authToken = generate_authToken(username, clientId)
@@ -110,9 +114,11 @@ def handle_deconnexion_request(data):
             'response_code': 100,
             'response_message': 'Compromised authToken at deconnexion tentative.'
         }
+
     # Envoyer une confirmation de déconnexion au client
     emit('response_to_deconnexion_request', response)
 
+# Gérer la tentative d'accès à la page de messagerie
 @socketio.on('access_messaging_request')
 def handle_access_messaging_request(authToken):
     payload = validate_authToken(authToken)
@@ -121,7 +127,6 @@ def handle_access_messaging_request(authToken):
         # Le authToken est valide, vous pouvez accéder aux informations du payload
         username = payload.get('username')
         clientId = payload.get('clientId')
-        print("authToken accepted in access_messaging_request call")
 
         response_from_db = mongodb_manager.get_user_conversations_without_msg(username)
         if response_from_db.get('response_code') == 1:
@@ -142,18 +147,17 @@ def handle_access_messaging_request(authToken):
             'response_code': 501,
             'response_message': f'Authentification authToken rejected, access to messaging not accepted for user {username} (client ID : {clientId})'
         }
-        print("authToken not accepted in access_messaging_request call")
 
-    print(response)
     emit('response_to_access_messaging_request', response)
 
+# Traitement pour rejoindre une conversation (évènement de clic sur une conversation coté Angular)
 @socketio.on('join_conversation')
 def handle_join_conversation(data):
     conversation_id = data.get('conversation_id')
     print(f"handle_join_conversation called for conversation id {conversation_id}")
     join_room(conversation_id)
    
-
+# Traitement de la demande de récupération des messages d'une conversation
 @socketio.on('get_messages')
 def handle_get_messages(data):
     try :
@@ -179,13 +183,18 @@ def handle_get_messages(data):
         }
     emit('messages_for_conversation', response)
 
+# Traitement lors de l'envoi d'un message
 @socketio.on('send_message')
 def handle_send_message(data):
     conversation_id = data.get('conversation_id')
     message = data.get('message')
 
     print(f"send_message called for conversation id : {conversation_id}, message data : {message}\n")
+
+    # Ajout dans MongoDB du message pour la conversation en question
     mongodb_manager.add_message(conversation_id=conversation_id, message=message)
+
+    # Envoi du nouveau message aux destinataires, i.e. la conversation
     emit('new_message_to_receive', data, room=conversation_id)
 
 

@@ -2,40 +2,115 @@
 from pymongo import MongoClient
 from datetime import datetime
 from bson import ObjectId
-import bcrypt
+#import bcrypt
+import hashlib
+
+# Fonction de hachage SHA-256 pour un mot de passe
+def hash_password_sha256(password):
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    return hashed_password
 
 # Définition de la classe MongoDBManager
 class MongoDBManager:
-    def __init__(self, url):
+    def __init__(self, url="mongodb://localhost:27017/" , database_name="MessagingAppINFO834"):
         # Initialisation des attributs de la classe
-        self.client = None
-        self.db = None
         self.url = url
-        self.database_name = None  
+        self.database_name = database_name
+        self.client = None
+        self.db = None  
+
+    # Méthode pour créer une base de données avec des données fictives d'utilisateurs et conversations
+    def initialize(self):
+        try:
+            # Connexion au client MongoDB avec l'URL spécifiée
+            self.client = MongoClient(self.url)
+            
+            # Vérification si la base de données spécifiée existe dans la liste des bases de données du client
+            if self.database_name in self.client.list_database_names():
+                # Si la base de données existe, supprimer la base de données existante
+                self.client.drop_database(self.database_name)
+                print(f"La base de données {self.database_name} existante a été supprimée.")
+
+            # Créer la nouvelle base de données
+            self.db = self.client[self.database_name]
+            print(f"La base de données {self.database_name} a été créée.")
+
+            # Créer les collections Utilisateurs et Conversations
+            self.db.create_collection("Utilisateurs")
+            self.db.create_collection("Conversations")
+            print("Collections Utilisateurs et Conversations créées avec succès.")
+
+            # Création de users fictifs
+            users = [
+                        {"username": "paul", "mot_de_passe": hash_password_sha256("myPwpaul"), "conversations": []},
+                        {"username": "sasha", "mot_de_passe": hash_password_sha256("myPwsasha"), "conversations": []},
+                        {"username": "maria", "mot_de_passe": hash_password_sha256("myPwmaria"), "conversations": []}
+                    ]
+
+            # Import des users dans MongoDB
+            for user in users:
+                self.insert_user(user)
+
+            # Création de conversations fictives entre Sasha et Maria (users fictifs)
+            conversations_sasha_maria = [
+                {"nom": "Rendu INFO834", "messages": [
+                    {"_id": 1, "emetteur": "sasha", "contenu": "Salut, tu sais s'il faut rendre un rapport ou juste le code?", "timestamp": str(datetime.now())},
+                    {"_id": 2, "emetteur": "maria", "contenu": "Aucune idee", "timestamp": str(datetime.now())},
+                ]},
+                {"nom": "Soirée", "messages": [
+                ]},
+            ]
+            
+            # Import dans MongoDB des conversations entre Sasha et Maria
+            for conv in conversations_sasha_maria:
+                self.add_conversation_for_users(['sasha', 'maria'], conv)
+
+            # Création d'une conversation fictive entre Sasha, Maria et Paul
+            conversation_sasha_maria_paul =  [
+                {"nom": "IDU4", "messages": [
+                ]}
+            ]
+
+            # Import dans MongoDB de la conversation entre Sasha, Maria et Paul
+            for conv in conversation_sasha_maria_paul:
+                self.add_conversation_for_users(['sasha', 'maria', 'paul'], conv)
+
+            response = {
+                'response_code': 1,
+                'response_message': f"Initialization of DB {self.database_name} succeeded."
+            }
+            return response
+        except Exception as e:
+            # Capture des exceptions et affichage d'un message d'erreur en cas de problème lors de l'initialization
+            response = {
+                'response_code': 1000,
+                'response_message': e
+            }
+            return response
 
     # Méthode pour se connecter à la base de données
-    def connect(self, database_name):
+    def connect(self):
         try:
             # Connexion au client MongoDB avec l'URL spécifiée
             self.client = MongoClient(self.url)
             # Vérification si la base de données spécifiée existe dans la liste des bases de données du client
-            if database_name in self.client.list_database_names():
+            if self.database_name in self.client.list_database_names():
                 # Si la base de données existe, assigner son nom à l'attribut database_name
-                self.database_name = database_name
+                self.database_name = self.database_name
                 # Sélection explicite de la base de données dans le client
-                self.db = self.client[database_name]
+                self.db = self.client[self.database_name]
                 
                 response = {
                     'response_code': 1,
-                    'response_message': f"Connexion to DB {database_name} succeeded."
+                    'response_message': f"Connexion to DB {self.database_name} succeeded."
                 }
-                print(f"Une connexion à la BD {database_name} a eu lieu.")
+                print(f"Une connexion à la BD {self.database_name} a eu lieu.")
                 return response
             else:
                 # Si la base de données n'existe pas, message d'erreur
                 response = {
                     'response_code': 300,
-                    'response_message': f"DB {database_name} doesn't exist."
+                    'response_message': f"DB {self.database_name} doesn't exist."
                 }
                 return response
             
@@ -43,17 +118,15 @@ class MongoDBManager:
             # Capture des exceptions et affichage d'un message d'erreur en cas de problème lors de la connexion
             response = {
                 'response_code': 1000,
-                'response_message': str(e)
+                'response_message': e
             }
             return response
-        
 
-    # Méthode pour vérifier qu'un utilisateur existe dans la base de données lors d'une tentative de connexion
-    def verify_user_credentials(self, username, password):
+    # Méthode pour vérifier les informations de connexion
+    def verify_user_credentials(self, username, hashedPassword):
         try:
-            user = self.db["Utilisateurs"].find_one({"username": username, "mot_de_passe": password})
+            user = self.db["Utilisateurs"].find_one({"username": username, "mot_de_passe": hashedPassword})
             if user:
-                print("Informations de connexion valides pour l'utilisateur :", user)
                 response = {
                     'response_code': 1,
                     'response_message': f'Verification of credentials OK for user {username}'
@@ -298,43 +371,9 @@ class MongoDBManager:
 
 # Exemple d'utilisation :
 if __name__ == "__main__":
-    # Création d'une instance de MongoDBManager avec l'URL de la base de données MongoDB
-    db_manager = MongoDBManager("mongodb://localhost:27017/")
+    # Création d'une instance de MongoDBManager
+    db_manager = MongoDBManager()
+
+    # Initialisation de la base de données 
+    db_manager.initialize()
     
-    # Connexion à la base de données spécifiée (dans cet exemple, "ProjInfo834")
-    if db_manager.connect("ProjInfo834"):
-
-        db_manager.delete_all_conversations()
-        db_manager.delete_all_conversations()
-
-        users = [
-            {"username": "paul", "mot_de_passe": bcrypt.hashpw("myPwpaul".encode(), bcrypt.gensalt()), "conversations": []},
-            {"username": "sasha", "mot_de_passe": bcrypt.hashpw("myPwsasha".encode(), bcrypt.gensalt()), "conversations": []},
-            {"username": "maria", "mot_de_passe": bcrypt.hashpw("myPwmaria".encode(), bcrypt.gensalt()), "conversations": []}
-        ]
-
-        for user in users:
-            db_manager.insert_user(user)
-
-        conversations_sasha_maria = [
-            {"nom": "Rendu INFO834", "messages": [
-                {"_id": 1, "emetteur": "sasha", "contenu": "Salut, tu sais s'il faut rendre un rapport ou juste le code?", "timestamp": str(datetime.now())},
-                {"_id": 2, "emetteur": "maria", "contenu": "Aucune idee", "timestamp": str(datetime.now())},
-            ]},
-            {"nom": "Soirée", "messages": [
-            ]},
-        ]
-
-        conversation_sasha_maria_paul =  [
-            {"nom": "IDU4", "messages": [
-            ]}
-        ]
-
-        for conv in conversations_sasha_maria:
-            db_manager.add_conversation_for_users(['sasha', 'maria'], conv)
-
-        for conv in conversation_sasha_maria_paul:
-            db_manager.add_conversation_for_users(['sasha', 'maria', 'paul'], conv)
-
-    else:
-        print("Impossible de se connecter a la base de donnees.")

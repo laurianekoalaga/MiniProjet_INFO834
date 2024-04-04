@@ -3,7 +3,8 @@ import { Component } from '@angular/core';
 import { SocketService } from '../socket.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Router } from '@angular/router';
-import * as bcrypt from 'bcryptjs';
+//import * as bcrypt from 'bcryptjs';
+import { sha256 } from 'js-sha256';
 import { Subscription } from 'rxjs';
 
 
@@ -33,7 +34,6 @@ export class LoginComponent {
   // Méthode poour le désabonnement de tous les observables
   cleanupSubscriptions(): void {
     this.subscriptions.forEach(subscription => subscription.unsubscribe());
-
   }
 
 
@@ -56,11 +56,10 @@ export class LoginComponent {
 
   onSubmit(): void {
     // Hasher le mot de passe avec bcrypt avant de l'envoyer au serveur
-    const hashedPassword = bcrypt.hashSync(this.password, 10);
+    const hashedPassword = sha256(this.password)
 
-    const subscription = this.socketService.connexion_request(this.username, this.clientId, this.password).subscribe(
+    const subscription = this.socketService.connexion_request(this.username, this.clientId, hashedPassword).subscribe(
       (data) => {
-        console.log("test")
         if (data.response_code == 1) {
           // Enregistrez le token dans le localStorage
           localStorage.setItem('authToken', data.authToken);
@@ -72,6 +71,7 @@ export class LoginComponent {
         }
      });
      this.subscriptions.push(subscription);
+     this.password = '';
   }
 
   // Méthode pour vérifier si le username dans le formulaire est conforme
